@@ -13,7 +13,43 @@ from translate import Translator
 from wx.lib.embeddedimage import PyEmbeddedImage
 import sqlite3
 import speech
-
+tzc = PyEmbeddedImage(
+    "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")
 
 class myapp(wx.App):
     def __init__(self,redirect):
@@ -159,10 +195,17 @@ def select_num(cur):
 
 	return result
 
+def main():
+	'''
+	运行GUI界面程序
+	'''
+	mainapp = myapp(redirect = False)
+	mainapp.MainLoop()
 
+      
 if __name__ == '__main__':
-	db=sqlite3.connect("./db.db")
-	cur=db.cursor()
+	# db=sqlite3.connect("./db.db")
+	# cur=db.cursor()
 	# '''
 	# 数据库操作
 	# '''
@@ -172,53 +215,9 @@ if __name__ == '__main__':
 	# select_data(cur)  #查询表中数据
 	# select_num(cur) #排序查询
 
-	db.commit()
-	cur.close()
-	db.close()
+	# db.commit()
+	# cur.close()
+	# db.close()
 
-	'''
-	运行GUI界面程序
-	'''
-	tzc = PyEmbeddedImage(
-    "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")
-	mainapp = myapp(redirect = False)
-	mainapp.MainLoop()
-
-      
-
+	main()
 
