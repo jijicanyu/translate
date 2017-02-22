@@ -2,6 +2,9 @@
 
 '''
 中英文翻译，且可以发音，并且将累计列出翻译量前十名的单词。
+问题：
+（1）translate模块，在一些网络里面无法使用，api打不开。
+（2）speech模块打包后会报错
 '''
 
 __author__="nMask"
@@ -10,6 +13,7 @@ __Date__="20170221"
 import wx
 import threading
 from translate import Translator
+from baidu_fanyi import fanyi
 from wx.lib.embeddedimage import PyEmbeddedImage
 import sqlite3
 import speech
@@ -59,16 +63,17 @@ class myapp(wx.App):
    
     def OnInit(self):
         frame = myframe(None,-1,'my title')
-        frame.SetMaxSize((425,325))
+        frame.SetMaxSize((500,400))
         frame.Show()
         self.SetTopWindow(frame)
         return True
      
 class myframe(wx.Frame):
 	def __init__(self,parent,id,title):
-		wx.Frame.__init__(self,parent,id,title=u"哥哥教你学英语    nMask's Blog http://thief.one ",size=(425,325))
+		wx.Frame.__init__(self,parent,id,title=u"哥哥教你学英语    nMask's Blog http://thief.one ",size=(500,400))
 		self.path=""
 		self.translator= Translator(to_lang="zh") #设置翻译输出对象为中文。
+		self.zimu=[chr(i) for i in range(97,123)]
 
 		panel=wx.Panel(self)
 		self.SetIcon(tzc.GetIcon())
@@ -76,7 +81,7 @@ class myframe(wx.Frame):
 		self.fanyi=wx.Button(panel,-1,u"翻译",pos=(140,10),size=(50,40))
 		self.yuyin=wx.Button(panel,-1,u"语音",pos=(200,10),size=(50,40))
 		self.content_end=wx.TextCtrl(panel,-1,pos=(10,80),size=(250,210),style=wx.TE_MULTILINE|wx.HSCROLL|wx.TE_AUTO_URL|wx.TE_RICH2)
-		self.top_ten=wx.TextCtrl(panel,-1,pos=(260,10),size=(150,280),style=wx.TE_MULTILINE|wx.HSCROLL|wx.TE_AUTO_URL|wx.TE_RICH2)
+		self.top_ten=wx.TextCtrl(panel,-1,pos=(260,10),size=(200,300),style=wx.TE_MULTILINE|wx.HSCROLL|wx.TE_AUTO_URL|wx.TE_RICH2)
 
 
 		self.fanyi.Bind(wx.EVT_BUTTON,self.fanyi_run)
@@ -104,13 +109,22 @@ class myframe(wx.Frame):
 		db=sqlite3.connect("./db.db")  ##数据库连接配置
 		cur=db.cursor()
 		result_list=select_data(cur,content)  ##查询数据库
-
+		types=False
 		if len(result_list)==0: #若数据库中没有此条记录，则调用api查询
-			try:
-				result = self.translator.translate(content)
+			for i in content:
+				if i in self.zimu:
+					types=True
+					break
+			result=fanyi(content.encode("utf-8"),types) ##先通过百度翻译
+			if result=="":
+				try:
+					result = self.translator.translate(content)
+					insert_data(cur,content,result,"1") #将查询结果保存到数据库
+				except:
+					result=u"翻译失败，请检查网络是否存在问题！"
+			else:
 				insert_data(cur,content,result,"1") #将查询结果保存到数据库
-			except:
-				result=u"翻译失败，请检查网络是否存在问题！"
+
 		else:
 			result=result_list[0][1]
 			num=result_list[0][2]
@@ -138,15 +152,17 @@ class myframe(wx.Frame):
 
 	def yuyin_run(self,event):
 		content=self.content_start.GetValue()
-		t=threading.Thread(target=self.yuyin_main,args=(content,))
+		result=self.content_end.GetValue()
+		t=threading.Thread(target=self.yuyin_main,args=(content,result))
 		t.start()
 
-	def yuyin_main(self,content):
+	def yuyin_main(self,content,result):
 		'''
 		语音功能
 		'''
 		try:
 			speech.say(content)
+			speech.say(result)
 		except:
 			pass
 		pass
